@@ -2,6 +2,7 @@
 
 #include "FileData.h"
 #include "GamesDBScraper.h"
+#include "GamesDBJSONScraper.h"
 #include "Log.h"
 #include "Settings.h"
 #include "SystemData.h"
@@ -9,7 +10,8 @@
 #include <fstream>
 
 const std::map<std::string, generate_scraper_requests_func> scraper_request_funcs {
-	{ "TheGamesDB", &thegamesdb_generate_scraper_requests }
+  { "TheGamesDB", &thegamesdb_generate_scraper_requests },
+	{ "TheGamesDBJSON", &thegamesdb_generate_json_scraper_requests }
 };
 
 std::unique_ptr<ScraperSearchHandle> startScraperSearch(const ScraperSearchParams& params)
