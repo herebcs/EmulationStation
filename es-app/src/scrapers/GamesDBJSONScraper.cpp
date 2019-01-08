@@ -13,12 +13,15 @@
 #include "utils/TimeUtil.h"
 #include <pugixml/src/pugixml.hpp>
 
+/* When raspbian will get an up to date version of rapidjson we'll be
+   able to have it throw in case of error with the following:
 #ifndef RAPIDJSON_ASSERT
 #define RAPIDJSON_ASSERT(x)                                                    \
   if (!(x)) {                                                                  \
     throw std::runtime_error("rapidjson internal assertion failure: " #x);     \
   }
 #endif // RAPIDJSON_ASSERT
+*/
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -174,20 +177,44 @@ void thegamesdb_generate_json_scraper_requests(
 }
 
 namespace {
+std::string GetStringOrThrow(const Value &v, const std::string &key) {
+  if (!v.HasMember(key.c_str()) || !v[key.c_str()].IsString()) {
+    throw std::runtime_error(
+        "rapidjson internal assertion failure: missing or non string key:" +
+        key);
+  }
+  return v[key.c_str()].GetString();
+}
+int GetIntOrThrow(const Value &v, const std::string &key) {
+  if (!v.HasMember(key.c_str()) || !v[key.c_str()].IsInt()) {
+    throw std::runtime_error(
+        "rapidjson internal assertion failure: missing or non int key:" + key);
+  }
+  return v[key.c_str()].GetInt();
+}
+int GetIntOrThrow(const Value &v) {
+  if (!v.IsInt()) {
+    throw std::runtime_error(
+        "rapidjson internal assertion failure: not an int");
+  }
+  return v.GetInt();
+}
+
 std::string getBoxartImage(const Value &v) {
   if (!v.IsArray() || v.Size() == 0) {
     return "";
   }
   for (int i = 0; i < v.Size(); ++i) {
     auto &im = v[i];
-    std::string type = im["type"].GetString();
-    std::string side = im["side"].GetString();
+    std::string type = GetStringOrThrow(im, "type");
+    std::string side = GetStringOrThrow(im, "side");
     if (type == "boxart" && side == "front") {
-      return im["filename"].GetString();
+      return GetStringOrThrow(im, "filename");
     }
   }
-  return v[0]["filename"].GetString();
+  return GetStringOrThrow(v[0], "filename");
 }
+
 std::string getDeveloperString(const Value &v) {
   if (!v.IsArray()) {
     return "";
@@ -195,7 +222,7 @@ std::string getDeveloperString(const Value &v) {
   std::string out = "";
   bool first = true;
   for (int i = 0; i < v.Size(); ++i) {
-    auto mapIt = gamesdb_new_developers_map.find(v[i].GetInt());
+    auto mapIt = gamesdb_new_developers_map.find(GetIntOrThrow(v[i]));
     if (mapIt == gamesdb_new_developers_map.cend()) {
       continue;
     }
@@ -214,7 +241,7 @@ std::string getPublisherString(const Value &v) {
   std::string out = "";
   bool first = true;
   for (int i = 0; i < v.Size(); ++i) {
-    auto mapIt = gamesdb_new_publishers_map.find(v[i].GetInt());
+    auto mapIt = gamesdb_new_publishers_map.find(GetIntOrThrow(v[i]));
     if (mapIt == gamesdb_new_publishers_map.cend()) {
       continue;
     }
@@ -233,7 +260,7 @@ std::string getGenreString(const Value &v) {
   std::string out = "";
   bool first = true;
   for (int i = 0; i < v.Size(); ++i) {
-    auto mapIt = gamesdb_new_genres_map.find(v[i].GetInt());
+    auto mapIt = gamesdb_new_genres_map.find(GetIntOrThrow(v[i]));
     if (mapIt == gamesdb_new_genres_map.cend()) {
       continue;
     }
@@ -248,12 +275,12 @@ std::string getGenreString(const Value &v) {
 
 void processGame(const Value &game, const Value &boxart,
                  std::vector<ScraperSearchResult> &results) {
-  std::string baseImageUrlThumb = boxart["base_url"]["thumb"].GetString();
-  std::string baseImageUrlLarge = boxart["base_url"]["large"].GetString();
+  std::string baseImageUrlThumb = GetStringOrThrow(boxart["base_url"], "thumb");
+  std::string baseImageUrlLarge = GetStringOrThrow(boxart["base_url"], "large");
 
   ScraperSearchResult result;
 
-  result.mdl.set("name", game["game_title"].GetString());
+  result.mdl.set("name", GetStringOrThrow(game, "game_title"));
   if (game.HasMember("overview") && game["overview"].IsString()) {
     result.mdl.set("desc", game["overview"].GetString());
   }
@@ -276,7 +303,7 @@ void processGame(const Value &game, const Value &boxart,
     result.mdl.set("players", std::to_string(game["players"].GetInt()));
   }
 
-  std::string id = std::to_string(game["id"].GetInt());
+  std::string id = std::to_string(GetIntOrThrow(game, "id"));
   if (boxart["data"].HasMember(id.c_str())) {
     std::string image = getBoxartImage(boxart["data"][id.c_str()]);
     result.thumbnailUrl = baseImageUrlThumb + "/" + image;
