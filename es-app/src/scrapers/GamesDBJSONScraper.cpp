@@ -13,14 +13,12 @@
 #include "utils/TimeUtil.h"
 #include <pugixml/src/pugixml.hpp>
 
-/*
 #ifndef RAPIDJSON_ASSERT
 #define RAPIDJSON_ASSERT(x)                                                    \
   if (!(x)) {                                                                  \
     throw std::runtime_error("rapidjson internal assertion failure: " #x);     \
   }
 #endif // RAPIDJSON_ASSERT
-*/
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -169,7 +167,6 @@ void thegamesdb_generate_json_scraper_requests(
       }
       path += platformQueryParam;
     }
-    LOG(LogError) << "Issuing request: " << path << "\n";
 
     requests.push(std::unique_ptr<ScraperRequest>(
         new TheGamesDBJSONRequest(requests, results, path)));
@@ -256,43 +253,32 @@ void processGame(const Value &game, const Value &boxart,
 
   ScraperSearchResult result;
 
-  LOG(LogError) << "Step 1";
   result.mdl.set("name", game["game_title"].GetString());
-  LOG(LogError) << "Step 2";
   if (game.HasMember("overview") && game["overview"].IsString()) {
-      result.mdl.set("desc", game["overview"].GetString());
+    result.mdl.set("desc", game["overview"].GetString());
   }
-  LOG(LogError) << "Step 3";
   if (game.HasMember("release_date") && game["release_date"].IsString()) {
     result.mdl.set("releasedate",
                    Utils::Time::DateTime(Utils::Time::stringToTime(
                        game["release_date"].GetString(), "%Y-%m-%d")));
   }
-  LOG(LogError) << "Step 4";
   if (game.HasMember("developers") && game["developers"].IsArray()) {
     result.mdl.set("developer", getDeveloperString(game["developers"]));
   }
-  LOG(LogError) << "Step 5";
   if (game.HasMember("publishers") && game["publishers"].IsArray()) {
     result.mdl.set("publisher", getPublisherString(game["publishers"]));
   }
-  LOG(LogError) << "Step 6";
   if (game.HasMember("genres") && game["genres"].IsArray()) {
 
     result.mdl.set("genre", getGenreString(game["genres"]));
   }
-  LOG(LogError) << "Step 7";
   if (game.HasMember("players") && game["players"].IsInt()) {
     result.mdl.set("players", std::to_string(game["players"].GetInt()));
   }
 
-  LOG(LogError) << "Step 8";
   std::string id = std::to_string(game["id"].GetInt());
-  LOG(LogError) << "Step 9";
   if (boxart["data"].HasMember(id.c_str())) {
-    LOG(LogError) << "Step 9";
     std::string image = getBoxartImage(boxart["data"][id.c_str()]);
-    LOG(LogError) << "Step 11";
     result.thumbnailUrl = baseImageUrlThumb + "/" + image;
     result.imageUrl = baseImageUrlLarge + "/" + image;
   }
@@ -306,10 +292,7 @@ void TheGamesDBJSONRequest::process(const std::unique_ptr<HttpReq> &req,
   assert(req->status() == HttpReq::REQ_SUCCESS);
 
   Document doc;
-  LOG(LogError) << "Received response: " << req->getContent()
-                << "\n parsing...\n";
   doc.Parse(req->getContent().c_str());
-  LOG(LogError) << "Done parsing.\n";
 
   if (doc.HasParseError()) {
     std::string err =
